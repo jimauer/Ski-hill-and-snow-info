@@ -3,6 +3,8 @@ library(tidyverse)
 library(lubridate)
 library(rgdal)
 
+
+getsnotel <-function() {
 #snotel site data
 meta_data <- snotel_info()
 
@@ -21,6 +23,11 @@ df1<-df %>% mutate(date=ymd(date),max_temp=(temperature_max*(9/5)+32),
                    mean_temp=(temperature_mean*(9/5)+32)) %>% 
   select(-temperature_max,-temperature_min,-temperature_mean)
 
+return(df1)
+}
+
+df1<-getsnotel()
+
 #table of precip in last week
 df1 %>% filter(date>Sys.Date()-7,precipitation!='NA') %>%
   group_by(site_name,county) %>% 
@@ -32,32 +39,38 @@ MT<-map_data("county","Montana")
 
 #Mapping snotel sites with Snow Water Equiv, max temp and ski sites for previous day
 #plot1<-
-df1 %>% filter(date==max(date)-1) %>% 
+plot1<-df1 %>% filter(date==max(date)-1) %>% 
   arrange(desc(snow_water_equivalent)) %>% 
+  mutate(snow_water_equivalent=snow_water_equivalent/25.4,precipitation=precipitation/25.4) %>% 
   select(site_name,latitude,longitude,elev,county,snow_water_equivalent,
          max_temp,precipitation) %>%
   rename(`Max Temp`=max_temp,`Snow Water Equiv`=snow_water_equivalent) %>% 
   ggplot() +
   geom_polygon(data=MT, aes(long, lat, group = group),fill = "sienna3", colour = "black") + 
   coord_quickmap() +
-  geom_point(aes(y=latitude,x=longitude,size=`Snow Water Equiv`,color=`Max Temp`))+
+  geom_point(aes(y=latitude,x=longitude,size=`Snow Water Equiv`,color=precipitation))+
   scale_size_continuous(range = c(3, 12))+
   geom_point(data=MTHills,aes(y=lat,x=long),color="snow2")+
   geom_text(data=MTHills,aes(y=lat,x=long,label=area),nudge_y=-0.1,color='snow2')+
   ggtitle("Montana Snotel Site Data") +
+  labs(subtitle=Sys.Date()-1,caption="https://www.wcc.nrcs.usda.gov/snow/")+
   theme(axis.line=element_blank(),axis.text.x=element_blank(),
         axis.text.y=element_blank(),axis.ticks=element_blank(),
         axis.title.x=element_blank(),
         axis.title.y=element_blank(),
-        panel.background=element_rect(fill="black"),panel.border=element_blank(),
+        panel.background=element_rect(fill="grey27"),panel.border=element_blank(),
         panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),plot.background=element_rect(fill="black"),
+        panel.grid.minor=element_blank(),plot.background=element_rect(fill="grey27"),
         legend.key = element_rect(colour = "transparent", fill = "transparent"),
         legend.background = element_rect(colour = "transparent", fill = "transparent"),
-        legend.justification = c(1,.5), legend.position = c(.95,.72),
+        legend.justification = c(1,.5), legend.position = c(.9,.6),
         legend.text=element_text(color="snow2",size=15,face='bold'),
         legend.title = element_text(color="snow2",size=15,face='bold'),
-        plot.title = element_text(color="snow2",face="bold",size=25,hjust=.5,vjust=.8))
+        plot.title = element_text(color="snow2",face="bold",size=25,hjust=.5,vjust=.8),
+        plot.subtitle = element_text(color="snow2",hjust=.5),
+        plot.caption = element_text(color="snow2") )
+
+plot1
 
 ggsave('/Users/jimauer/R/Snow/plot1.png',plot=plot1,scale=1.75)
 
@@ -84,3 +97,5 @@ df1 %>% filter(date==Sys.Date()-1) %>%
   geom_polygon(data=MT, aes(long, lat, group = group),fill = "white", colour = "grey50") + 
   coord_quickmap() +
   geom_point(data=MTHills,aes(y=lat,x=long),color="red")
+
+snotel_info
